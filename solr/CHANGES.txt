@@ -102,6 +102,8 @@ New Features
 * SOLR-11250: A new DefaultWrapperModel class for loading of large and/or externally stored
   LTRScoringModel definitions. (Yuki Yano, shalin, Christine Poerschke)
 
+* SOLR-11508: Make coreRootDirectory configurable via an environment variable (SOLR_CORE_HOME) (Marc Morissette)
+
 Bug Fixes
 ----------------------
 

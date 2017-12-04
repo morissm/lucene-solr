@@ -333,16 +333,21 @@ function print_usage() {
     echo "  -m <memory>   Sets the min (-Xms) and max (-Xmx) heap size for the JVM, such as: -m 4g"
     echo "                  results in: -Xms4g -Xmx4g; by default, this script sets the heap size to 512m"
     echo ""
-    echo "  -s <dir>      Sets the solr.solr.home system property; Solr will create core directories under"
-    echo "                  this directory. This allows you to run multiple Solr instances on the same host"
-    echo "                  while reusing the same server directory set using the -d parameter. If set, the"
-    echo "                  specified directory should contain a solr.xml file, unless solr.xml exists in Zookeeper."
+    echo "  -s <dir>      Sets the solr.solr.home system property which contains the server's configuration."
+    echo "                  This allows you to run multiple Solr instances on the same host while reusing the "
+    echo "                  same server directory set using the -d parameter. If set, the specified directory "
+    echo "                  should contain a solr.xml file, unless solr.xml exists in Zookeeper."
     echo "                  This parameter is ignored when running examples (-e), as the solr.solr.home depends"
     echo "                  on which example is run. The default value is server/solr. If passed relative dir,"
     echo "                  validation with current dir will be done, before trying default server/<dir>"
     echo ""
-    echo "  -t <dir>      Sets the solr.data.home system property, where Solr will store data (index)."
-    echo "                  If not set, Solr uses solr.solr.home for config and data."
+    echo "  -C <dir>      Sets the solr.core.home system property, where Solr stores its core directories and "
+    echo "                  configuration. Use this to store data away from configuration while in Cloud mode."
+    echo "                  If not set, Solr uses solr.solr.home. "
+    echo ""
+    echo "  -t <dir>      Sets the solr.data.home system property, where Solr stores data (index). Use this to"
+    echo "                  store data away from configuration in standalone mode. If not set, Solr uses "
+    echo "                  solr.core.home for config and data."
     echo ""
     echo "  -e <example>  Name of the example to run; available examples:"
     echo "      cloud:         SolrCloud example"
@@ -1458,6 +1463,15 @@ if [ $# -gt 0 ]; then
             SOLR_HOME="$2"
             shift 2
         ;;
+        -C|-core.home)
+            if [[ -z "$2" || "${2:0:1}" == "-" ]]; then
+              print_usage "$SCRIPT_CMD" "A core directory must be specified when using the $1 option!"
+              exit 1
+            fi
+
+            SOLR_CORE_HOME="$2"
+            shift 2
+        ;;
         -t|-data.home)
             SOLR_DATA_HOME="$2"
             shift 2
@@ -1762,6 +1776,10 @@ if [ ! -e "$SOLR_HOME" ]; then
   echo -e "\nSolr home directory $SOLR_HOME not found!\n"
   exit 1
 fi
+if [ ! -e "$SOLR_CORE_HOME" ]; then
+  echo -e "\nSolr core home directory $SOLR_CORE_HOME not found!\n"
+  exit 1
+fi
 if [[ $SOLR_DATA_HOME ]] && [ ! -e "$SOLR_DATA_HOME" ]; then
   echo -e "\nSolr data home directory $SOLR_DATA_HOME not found!\n"
   exit 1
@@ -1970,6 +1988,10 @@ function launch_solr() {
       echo -e "    SOLR_LOG_LEVEL  = $SOLR_LOG_LEVEL"
     fi
 
+    if [ "$SOLR_CORE_HOME" != "" ]; then
+      echo -e "    SOLR_CORE_HOME  = $SOLR_CORE_HOME"
+    fi
+
     if [ "$SOLR_DATA_HOME" != "" ]; then
       echo -e "    SOLR_DATA_HOME  = $SOLR_DATA_HOME"
     fi
@@ -1988,7 +2010,8 @@ function launch_solr() {
     "${REMOTE_JMX_OPTS[@]}" "${CLOUD_MODE_OPTS[@]}" $SOLR_LOG_LEVEL_OPT -Dsolr.log.dir="$SOLR_LOGS_DIR" \
     "-Djetty.port=$SOLR_PORT" "-DSTOP.PORT=$stop_port" "-DSTOP.KEY=$STOP_KEY" \
     "${SOLR_HOST_ARG[@]}" "-Duser.timezone=$SOLR_TIMEZONE" \
-    "-Djetty.home=$SOLR_SERVER_DIR" "-Dsolr.solr.home=$SOLR_HOME" "-Dsolr.data.home=$SOLR_DATA_HOME" "-Dsolr.install.dir=$SOLR_TIP" \
+    "-Djetty.home=$SOLR_SERVER_DIR" "-Dsolr.solr.home=$SOLR_HOME" "-Dsolr.core.home=$SOLR_CORE_HOME" \
+    "-Dsolr.data.home=$SOLR_DATA_HOME" "-Dsolr.install.dir=$SOLR_TIP" \
     "-Dsolr.default.confdir=$DEFAULT_CONFDIR" "${LOG4J_CONFIG[@]}" "${SOLR_OPTS[@]}")
 
   if [ "$SOLR_MODE" == "solrcloud" ]; then

@@ -305,16 +305,21 @@ goto done
 @echo   -m memory     Sets the min (-Xms) and max (-Xmx) heap size for the JVM, such as: -m 4g
 @echo                   results in: -Xms4g -Xmx4g; by default, this script sets the heap size to 512m
 @echo.
-@echo   -s dir        Sets the solr.solr.home system property; Solr will create core directories under
-@echo                   this directory. This allows you to run multiple Solr instances on the same host
-@echo                   while reusing the same server directory set using the -d parameter. If set, the
-@echo                   specified directory should contain a solr.xml file, unless solr.xml exists in Zookeeper.
+@echo   -s <dir>      Sets the solr.solr.home system property which contains the server's configuration.
+@echo                   This allows you to run multiple Solr instances on the same host while reusing the
+@echo                   same server directory set using the -d parameter. If set, the specified directory
+@echo                   should contain a solr.xml file, unless solr.xml exists in Zookeeper.
 @echo                   This parameter is ignored when running examples (-e), as the solr.solr.home depends
-@echo                   on which example is run. The default value is server/solr. If passed a relative dir
-@echo                   validation with the current dir will be done before trying the default server/<dir>
+@echo                   on which example is run. The default value is server/solr. If passed relative dir,
+@echo                   validation with current dir will be done, before trying default server/<dir>
 @echo.
-@echo   -t dir        Sets the solr.data.home system property, used as root for ^<instance_dir^>/data directories.
-@echo                   If not set, Solr uses solr.solr.home for both config and data.
+@echo   -C <dir>      Sets the solr.core.home system property, where Solr stores its core directories and
+@echo                   configuration. Use this to store data away from configuration while in Cloud mode.
+@echo                   If not set, Solr uses solr.solr.home.
+@echo.
+@echo   -t <dir>      Sets the solr.data.home system property, where Solr stores data (index). Use this to
+@echo                   store data away from configuration in standalone mode. If not set, Solr uses
+@echo                   solr.core.home for config and data.
 @echo.
 @echo   -e example    Name of the example to run; available examples:
 @echo       cloud:          SolrCloud example
@@ -616,6 +621,7 @@ IF "%1"=="-cloud" goto set_cloud_mode
 IF "%1"=="-d" goto set_server_dir
 IF "%1"=="-dir" goto set_server_dir
 IF "%1"=="-s" goto set_solr_home_dir
+IF "%1"=="-C" goto set_solr_core_dir
 IF "%1"=="-t" goto set_solr_data_dir
 IF "%1"=="-solr.home" goto set_solr_home_dir
 IF "%1"=="-e" goto set_example
@@ -711,6 +717,25 @@ set "SOLR_HOME=%~2"
 SHIFT
 SHIFT
 goto parse_args
+
+:set_solr_core_dir
+
+set "arg=%~2"
+IF "%arg%"=="" (
+  set SCRIPT_ERROR=Directory name is required!
+  goto invalid_cmd_line
+)
+
+set firstChar=%arg:~0,1%
+IF "%firstChar%"=="-" (
+  set SCRIPT_ERROR=Expected directory but found %2 instead!
+  goto invalid_cmd_line
+)
+set "SOLR_CORE_HOME=%~2"
+SHIFT
+SHIFT
+goto parse_args
+
 
 :set_solr_data_dir
 
@@ -930,6 +955,7 @@ IF [%SOLR_LOGS_DIR%] == [] (
   set SOLR_LOGS_DIR=%SOLR_LOGS_DIR:"=%
 )
 set SOLR_LOGS_DIR_QUOTED="%SOLR_LOGS_DIR%"
+set SOLR_CORE_HOME_QUOTED="%SOLR_CORE_HOME%"
 set SOLR_DATA_HOME_QUOTED="%SOLR_DATA_HOME%"
 
 set "EXAMPLE_DIR=%SOLR_TIP%\example"
@@ -1187,6 +1213,10 @@ IF "%verbose%"=="1" (
     @echo     SOLR_LOG_LEVEL  = !SOLR_LOG_LEVEL!
   )
 
+  IF NOT "%SOLR_CORE_HOME%"=="" (
+    @echo     SOLR_CORE_HOME  = !SOLR_CORE_HOME!
+  )
+
   IF NOT "%SOLR_DATA_HOME%"=="" (
     @echo     SOLR_DATA_HOME  = !SOLR_DATA_HOME!
   )
@@ -1207,6 +1237,7 @@ IF "%SOLR_SSL_ENABLED%"=="true" (
 )
 IF NOT "%SOLR_LOG_LEVEL%"=="" set "START_OPTS=%START_OPTS% -Dsolr.log.level=%SOLR_LOG_LEVEL%"
 set "START_OPTS=%START_OPTS% -Dsolr.log.dir=%SOLR_LOGS_DIR_QUOTED%"
+IF NOT "%SOLR_CORE_HOME%"=="" set "START_OPTS=%START_OPTS% -Dsolr.core.home=%SOLR_CORE_HOME_QUOTED%"
 IF NOT "%SOLR_DATA_HOME%"=="" set "START_OPTS=%START_OPTS% -Dsolr.data.home=%SOLR_DATA_HOME_QUOTED%"
 IF NOT DEFINED LOG4J_CONFIG set "LOG4J_CONFIG=file:%SOLR_SERVER_DIR%\resources\log4j.properties"
 
