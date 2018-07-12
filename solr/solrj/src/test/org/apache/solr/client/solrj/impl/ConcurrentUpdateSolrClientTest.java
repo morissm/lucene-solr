@@ -17,6 +17,7 @@
 package org.apache.solr.client.solrj.impl;
 
 import org.apache.http.HttpResponse;
+import org.apache.http.conn.ConnectTimeoutException;
 import org.apache.solr.SolrJettyTestBase;
 import org.apache.solr.client.solrj.SolrQuery;
 import org.apache.solr.client.solrj.SolrServerException;
@@ -344,6 +345,27 @@ public class ConcurrentUpdateSolrClientTest extends SolrJettyTestBase {
       public OutcomeCountingConcurrentUpdateSolrClient build() {
         return new OutcomeCountingConcurrentUpdateSolrClient(this);
       }
+    }
+  }
+
+  /**
+   * Test that connection timeout information is passed to the HttpSolrClient that handle non add operations
+   */
+  @Test(timeout = 1000)
+  public void testConnectionTimeoutOnCommit() throws IOException, SolrServerException {
+    // 240.0.0.0/4 is reserved for future use by the IANA and is in effect a black hole
+    try (ConcurrentUpdateSolrClient client = new ConcurrentUpdateSolrClient.Builder("http://240.0.0.1:8983/")
+        .withConnectionTimeout(5)
+        .build()){
+      // Expecting an exception
+      client.commit();
+      fail();
+    }
+    catch (SolrServerException e) {
+      if (!(e.getCause() instanceof ConnectTimeoutException)) {
+        throw e;
+      }
+      // else test passses
     }
   }
 }
