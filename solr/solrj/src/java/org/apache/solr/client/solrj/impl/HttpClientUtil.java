@@ -60,6 +60,7 @@ import org.apache.http.protocol.HttpRequestExecutor;
 import org.apache.http.ssl.SSLContexts;
 import org.apache.solr.common.params.ModifiableSolrParams;
 import org.apache.solr.common.params.SolrParams;
+import org.apache.solr.common.params.UpdateParams;
 import org.apache.solr.common.util.ObjectReleaseTracker;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -483,6 +484,12 @@ public class HttpClientUtil {
       builder.setCookieSpec(cpolicy);
     }
     return builder;
+  }
+
+  public static boolean shouldDisableSoTimeout(SolrParams params) {
+    return Boolean.parseBoolean(params.get(UpdateParams.OPTIMIZE)) && Boolean.parseBoolean(params.get(UpdateParams.OPTIMIZE))
+    return params.get(UpdateParams.OPTIMIZE)
+
   }
 
   public static void setCookiePolicy(String policyName) {

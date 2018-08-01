@@ -517,11 +517,14 @@ public class HttpSolrClient extends SolrClient {
 
   private static final List<String> errPath = Arrays.asList("metadata", "error-class");//Utils.getObjectByPath(err, false,"metadata/error-class")
 
-  protected NamedList<Object> executeMethod(HttpRequestBase method, final ResponseParser processor, final boolean isV2Api) throws SolrServerException {
+  protected NamedList<Object> executeMethod(HttpRequestBase method, final ResponseParser processor, final boolean isV2Api, final boolean longOperation) throws SolrServerException {
     method.addHeader("User-Agent", AGENT);
  
     org.apache.http.client.config.RequestConfig.Builder requestConfigBuilder = HttpClientUtil.createDefaultRequestConfigBuilder();
-    if (soTimeout != null) {
+    if (longOperation) {
+      requestConfigBuilder.setSocketTimeout(-1);
+    }
+    else if (soTimeout != null) {
       requestConfigBuilder.setSocketTimeout(soTimeout);
     }
     if (connectionTimeout != null) {
